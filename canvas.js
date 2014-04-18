@@ -5,12 +5,12 @@
 /* Variables definition */
 var frame_x = 0;
 var frame_y = 0;
-var frame_w = 500
+var frame_w = 600
 var frame_h = 800;
 
-var gframe_x = 500;
+var gframe_x = 600;
 var gframe_y = 0;
-var gframe_w = 500;
+var gframe_w = 400;
 var gframe_h = 800;
 
 var on = 2; //number of image
@@ -19,6 +19,8 @@ var ton = 50; //number of text
 
 var signagepath = "./signage/";
 //var signagepath = "/Users/kentaro/Trashcan_s/signage/";
+
+var configimgpath = "./config/";
 
 /**
 var pinimg = new Image();
@@ -32,6 +34,7 @@ var focus = null;
 var dr = null;
 var isDrag = false;
 var isDraw = false;
+var actionMode = 0; //0=>hand 1=>pen 2=>erase
 
 var line = new Array();
 var li = 0;
@@ -43,8 +46,6 @@ var x, y;
 var startX = 0;
 var startY = 0;
 
-var color = "#696969";
-
 //Img
 var iconimg = new Array();
 for(var i=0; i<allon; i++){    
@@ -52,13 +53,19 @@ for(var i=0; i<allon; i++){
     iconimg[i].src = signagepath + i +".png";
 }
 
+var boximg = new Array();
+for(var i=0; i<3; i++){    
+    boximg[i] = new Image();
+    boximg[i].src = configimgpath + "box" + i +".png";
+}
+
 var textdata = null;
 
 //Draw bottun;
 var box = new Array();
-//box[0] = new Toolbox(10, 10, "#696969");
-//box[1] = new Toolbox(10, 60, "#ff0000");
-//box[2] = new Toolbox(10, 110, "#ffffff");
+box[0] = new Toolbox(0, 10, 10, 0);
+box[1] = new Toolbox(1, 10, 60, 1);
+box[2] = new Toolbox(2, 10, 110, 2);
 
 log[lo] = new Log("SESSIONSTART");
 
@@ -70,11 +77,11 @@ window.onload = function() {
 var search_msg_data
 		$.ajax({
         type: "GET",
-        url: "http://localhost/gcs/hoge.php?s=1&e=100",
+        url: "./hoge.php?s=1&e=100",
 
         success: function(msg){
         
-        	console.log("success");
+        	console.log("DB CONNECTION SUCCESS");
 
         //setTimeout(search_json, 5000); // タイムラグ表示(Now Loading確認用)
         var get_json = eval("("+msg+")");
@@ -126,10 +133,10 @@ function mouseMoveListner(e) {
 		var oi = null;
 		focus = null;
 
-		if(!isDrag){
+		if(actionMode == 0){
 			for(var i=0; i<gomi.length; i++){
 				gomi[i].mo = 0;
-				if(mouseX > gomi[i].xPos && mouseX < gomi[i].xPos + gomi[i].w && mouseY > gomi[i].yPos && mouseY < gomi[i].yPos + gomi[i].h){
+				if(mouseX > gomi[i].xPos - gomi[i].w/2 && mouseX < gomi[i].xPos + gomi[i].w/2 && mouseY > gomi[i].yPos - gomi[i].h/2 && mouseY < gomi[i].yPos + gomi[i].h/2){
 					if(o == null && oi == null){
 						o = gomi[i].ord;
 						oi = i;
@@ -153,7 +160,7 @@ canvas.addEventListener("mousedown",function(e){
 		var mouseY = getpoint(e,"y");
 		
 		//garbage
-		if(focus != null ){
+		if(actionMode == 0 && focus != null ){
 			isDrag = true;
 			dr = focus;
 	        startX = mouseX - gomi[dr].xPos;
@@ -170,10 +177,9 @@ canvas.addEventListener("mousedown",function(e){
 			}
 	        }
 			gomi[dr].ord = order;
-			log[lo] = new Log("DRAGIMAGE," + gomi[dr].img + "," + e.clientX + "," + e.clientY);
+			log[lo] = new Log("DRAGGOMI," + gomi[dr].img + "," + e.clientX + "," + e.clientY);
 
 		}
-		
 		
 		//whiteboard
 		//click box
@@ -184,22 +190,31 @@ canvas.addEventListener("mousedown",function(e){
 					box[ii].display(cc);
 				}
 					box[i].status_flag = 2;
-					color = box[i].color;
 					box[i].display(cc);
-					log[lo] = new Log("SELECTCOLOR," + color);
+					actionMode = box[i].id;
+					log[lo] = new Log("SELECTMODE," + actionMode);
 					return;
 			}
 		}
 		
 		//draw
-		/**
+		if(actionMode == 1 || actionMode == 2){
 		if(mouseX > frame_x && mouseX < frame_x + frame_w && mouseY > frame_y && mouseY < frame_y + frame_h){
-			line[li] = new Line(li, color, order);  
-			isDraw = true;
-			log[lo] = new Log("STARTDRAW," + li + "," + color);
+			var linecolor = "#696969";
+			var linewidth = 1;
+			if(actionMode == 1){
+				    linecolor = "#696969";
+				    linewidth = 1;
+			}else if(actionMode == 2){
+				    linecolor = "#ffffff";
+				    linewidth = 40;
+			}
+			line[li] = new Line(li, linecolor, linewidth , order);  
+			log[lo] = new Log("STARTDRAW," + li + "," + actionMode);
 			order++;
+			isDraw = true;
 		};
-		**/
+		};
 		
 	    }
 	);
@@ -225,7 +240,7 @@ canvas.addEventListener("mousemove", function(e){
 		if(mouseX > frame_x && mouseX < frame_x + frame_w && mouseY > frame_y + box[0].y + box[0].w + box[0].y + 20 && mouseY < frame_y + frame_h){
 			line[li].draw(mouseX, mouseY);
 			line[li].display(cc);
-			//log[lo] = new Log("DRAWING," + x + "," + y);
+			log[lo] = new Log("DRAWING," + mouseX + "," + mouseY);
 		};
 	};
     }
@@ -263,18 +278,11 @@ canvas.addEventListener("mouseup",function(e){
 var loop = function() {
 	
 			cc.clearRect(0,0,canvas.width,canvas.height);
-		/**
-		for(var i = 0; i < box.length; i++){
-			box[i].display(cc);
-		}
-		**/
-		
+
 		for(var o=0; o<order+1; o++){
 	    	for(var i=0; i<gomi.length; i++){
 		    	if(gomi[i].ord == o){
-		    		if(gomi[i].mo != 1){
-		    			gomi[i].move(); 
-		    		}
+		    		gomi[i].move(); 
 			       	gomi[i].edge(); 
 		      		gomi[i].display(cc);
 		    	}
@@ -284,10 +292,15 @@ var loop = function() {
         		if(line[ii].ord == o){
     	    		//line[ii].move()
     	    		line[ii].display(cc);
+    	    		//console.log(line[ii]);
         		}
         	}
 		}	
 
+		for(var i = 0; i < box.length; i++){
+			box[i].display(cc);
+		}
+		
 		/**
 		cc.lineWidth = 1;
 		cc.strokeStyle='#696969';
@@ -352,10 +365,12 @@ function end(){
 		  this.h = iconimg[this.typeid].height*imgrate;
 	  }
 	  if(this.type == "t"){
-		  this.w = 70;
+		  this.w = 30;
 		  this.h = 30;
 	  }
 	  
+	  this.sizerate = 1; 
+	  this.sizerateSpeed = 0.2;
  }
  
  /* Display */
@@ -369,54 +384,74 @@ function end(){
     	 
     	 
     	 if(this.type == "i"){
-    		 cc.drawImage(iconimg[this.typeid], this.xPos, this.yPos, this.w, this.h); //icon
+    		 this.w = iconimg[this.typeid].width*imgrate*this.sizerate;
+    		 this.h = iconimg[this.typeid].height*imgrate*this.sizerate;
+    		 cc.drawImage(iconimg[this.typeid], this.xPos - this.w/2, this.yPos - this.h/2, this.w, this.h); //icon
+    		 //console.log(this.typeid);
     		 cc.lineWidth = 1; 
     		 cc.strokeStyle = "#696969";
-    		 cc.strokeRect(this.xPos, this.yPos, this.w, this.h);
+    		 cc.strokeRect(this.xPos - this.w/2, this.yPos - this.h/2, this.w, this.h);
     	 }
     	 
     	 if(this.type == "t"){
-    		 cc.textBaseline = "top";
-    		 cc.textAlign = "start";
-    		 cc.font = "30px 'ヒラギノ明朝 ProN W6'";
+    		 cc.textBaseline = "middle";
+    		 cc.textAlign = "center";
+    		 cc.font = 30 * this.sizerate + "px 'ヒラギノ明朝 ProN W6'";
     		 cc.fillStyle = "black";
     		 
     		 cc.fillText(this.name, this.xPos, this.yPos);
     		 this.w = cc.measureText(this.name).width;
+    		 this.h = 30 * this.sizerate;
     		 //console.log(cc.measureText(this.name).width);
     	 }
-    	 
-    	 if(this.mo == 1){
+    	 	/**
         	 cc.save();
         	 cc.globalAlpha = 0.4;
     		 cc.fillStyle = "#FFD700";
         	 cc.fillRect(this.xPos, this.yPos, this.w, this.h);
         	 cc.restore();
-         }
-    }
+			**/
+     }
  	cc.restore();  
  }
  
  /* Move */
  Gomi.prototype.move = function(){  
-	 
+	 if(this.mo == 0){
 	 if(this.xPos >= gframe_x){
-     
-	 this.rSpeed += (Math.random()*2 - 1)*this.speed;
-     if(this.rSpeed > 0.05){this.rSpeed = 0.05;}else if(this.rSpeed < -0.05){this.rSpeed = -0.05;}
-     
-     this.xSpeed += (Math.random()*2 - 1)*0.1*this.speed;
-     if(this.xSpeed > 1){this.xSpeed = 1;}else if(this.xSpeed < -1){this.xSpeed = -1;}
-     
-     this.ySpeed += (Math.random()*2 - 1)*(this.xPos - gframe_x)*0.005*this.speed;
-     if(this.ySpeed > 4){this.ySpeed = 4;}else if(this.ySpeed < 0){this.ySpeed = 0;}
-     
-     this.rad += this.rSpeed;
-     this.xPos += this.xSpeed;
-     this.yPos += this.ySpeed;
+		 this.rSpeed += (Math.random()*2 - 1)*this.speed;
+	     if(this.rSpeed > 0.05){this.rSpeed = 0.05;}else if(this.rSpeed < -0.05){this.rSpeed = -0.05;}
+	     
+	     this.xSpeed += (Math.random()*2 - 1)*0.1*this.speed;
+	     if(this.xSpeed > 1){this.xSpeed = 1;}else if(this.xSpeed < -1){this.xSpeed = -1;}
+	     
+	     this.ySpeed += (Math.random()*2 - 1)*(this.xPos - gframe_x)*0.005*this.speed;
+	     if(this.ySpeed > 4){this.ySpeed = 4;}else if(this.ySpeed < 0){this.ySpeed = 0;}
+	     
+	     this.rad += this.rSpeed;
+	     this.xPos += this.xSpeed;
+	     this.yPos += this.ySpeed;
+	 }
+
+	 if(this.sizerate > 1){
+		  this.sizerate -= 0.2;
+		  this.sizerateSpeed = 0.2;
+	 }else if(this.sizerate < 1){
+		 this.sizerate = 1;
 	 }
 	 
+	 }
 	 
+	 if(this.mo == 1){
+		 
+		 this.rad = 0;
+		 if(this.w < 400){
+			 if(this.sizerate < 1.3){
+				 this.sizerateSpeed -= 0.01; 
+				 this.sizerate += this.sizerateSpeed;
+			 }
+	 }
+	 }
  };
  	
    
@@ -424,6 +459,7 @@ function end(){
    Gomi.prototype.edge = function(){
   	if(this.xPos > gframe_x+gframe_w - this.w/2){
   		this.xPos = gframe_x+gframe_w - this.w/2;
+  		this.xSpeed = - this.xSpeed;
        }
     if(this.xPos < frame_x){
  		this.xPos = frame_x;
@@ -433,22 +469,33 @@ function end(){
    	    this.xPos = this.xPos;
 	    this.renew();
     }
-    if(this.rad < -10){
- 	    this.rad = -10;
+    if(this.rad < -5){
+ 	    this.rad = -5;
     }
-    if(this.rad > 10){
- 	    this.rad = 10;
+    if(this.rad > 5){
+ 	    this.rad = 5;
     }
+    
+    if(this.xPos < gframe_x && this.xPos > gframe_x - 10){
+    	this.xPos = gframe_x;
+    	this.xSpeed = -this.xSpeed;
+    }
+    
+    /**
     if(this.xPos < gframe_x && this.xPos > gframe_x - this.w/2){
     	this.xPos = gframe_x;
     }
     if(this.xPos < gframe_x - this.w/2 && this.xPos > gframe_x - this.w){
     	this.xPos = gframe_x  - this.w;
     }
+    **/
+    
    };
  
    
- /* Renew */
+ /* Renew 
+  * 画面下についた時に内容を更新
+  * */
  Gomi.prototype.renew = function(){
 	 if(this.type == "i"){
 		 this.typeid = Math.floor( Math.random() * allon );
@@ -464,27 +511,26 @@ function end(){
  };
 
 
-
 //** Toolbox **//
-function Toolbox(_x, _y, _c, _i){
+function Toolbox(_i, _x, _y, _im){
+	this.id = _i;
 	this.x = _x;
 	this.y = _y;
 	this.w = 30;
-	this.color = _c;
+	this.image = _im;
 	this.status_flag = 1;
 }
 
 /*display*/
 Toolbox.prototype.display = function(cc){
-	cc.fillStyle = this.color;
-	cc.fillRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
+	//cc.fillStyle = this.color;
+	//cc.fillRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
 	
-	if(this.color == "#ffffff"){
-		cc.beginPath();
-		cc.lineWidth = 0.5;
-		cc.strokeStyle='#696969';
-		cc.strokeRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
-	}
+	cc.beginPath();
+	cc.lineWidth = 1;
+	cc.strokeStyle='#000000';
+	cc.strokeRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
+	cc.drawImage(boximg[this.image], frame_x + this.x, frame_y + this.y, this.w, this.w); //icon
 	
 	if(this.status_flag == 2){
 		cc.beginPath();
@@ -500,11 +546,12 @@ Toolbox.prototype.display = function(cc){
 }
 
 //** Line **//
-function Line(_i, _c, _o){
+function Line(_i, _lc, _lw,  _o){
 	  this.id = _i;
+	  this.color = _lc;
+	  this.width = _lw;
 	  this.x = new Array();
 	  this.y = new Array();
-	  this.color =  _c;
 	  this.status_flag = true;
 	  this.ord = _o;
 }
@@ -515,13 +562,11 @@ Line.prototype.draw = function(_x,_y){
 	  this.y.push(_y);
 }
 
-/* display */	
+/* display */
+Line.prototype.display = function(cc){
 	if(this.status_flag){
 		cc.beginPath();
-		cc.lineWidth = 1;
-		if(this.color == "#ffffff"){
-			cc.lineWidth = 40;
-		}
+		cc.lineWidth = this.width;
 		cc.strokeStyle = this.color;
 		cc.moveTo(this.x[0],this.y[0]);
 		for(i = 0; i < this.x.length; i++){
@@ -529,6 +574,7 @@ Line.prototype.draw = function(_x,_y){
 		}
 		cc.stroke();
 	}
+}
 
 Line.prototype.move = function(){
 	//console.log(this.speed + this.status_flag);
@@ -555,6 +601,4 @@ var getpoint = function(_e, _p){
 		return mouseY;
 	}
 }
-
-
 
