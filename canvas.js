@@ -1,31 +1,20 @@
 /** socket action **/
 
 /** client canvas file **/
-
 /* Variables definition */
 var frame_x = 0;
 var frame_y = 0;
 var frame_w = 600
 var frame_h = 800;
-
 var gframe_x = 600;
 var gframe_y = 0;
 var gframe_w = 400;
 var gframe_h = 800;
 
-var on = 2; //number of image
-var allon = 100;
-var ton = 50; //number of text
-
 var signagepath = "./signage/";
 //var signagepath = "/Users/kentaro/Trashcan_s/signage/";
 
-var configimgpath = "./config/";
-
-/**
-var pinimg = new Image();
-pinimg.src = "./files/pin.png";
-**/
+var configimgpath = "./config/img/";
 
 var imgrate = 1;
 var order = 0;
@@ -36,17 +25,11 @@ var isDrag = false;
 var isDraw = false;
 var actionMode = 0; //0=>hand 1=>pen 2=>erase
 
-var line = new Array();
-var li = 0;
-
-var log = new Array();
-var lo = 0;
-
 var x, y;
 var startX = 0;
 var startY = 0;
 
-//Img
+var allon = 100; //number of all image
 var iconimg = new Array();
 for(var i=0; i<allon; i++){    
     iconimg[i] = new Image();
@@ -58,6 +41,19 @@ for(var i=0; i<3; i++){
     boximg[i] = new Image();
     boximg[i].src = configimgpath + "box" + i +".png";
 }
+
+var line = new Array();
+var li = 0;
+
+var log = new Array();
+var lo = 0;
+
+var agentWord = new Array();
+var aw = 0;
+
+var gomi = new Array();
+var on = 2; //number of image
+var ton = 50; //number of text
 
 var textdata = null;
 
@@ -80,11 +76,9 @@ var search_msg_data
         url: "./hoge.php?s=1&e=100",
 
         success: function(msg){
-        
-        	console.log("DB CONNECTION SUCCESS");
-
         //setTimeout(search_json, 5000); // タイムラグ表示(Now Loading確認用)
         var get_json = eval("("+msg+")");
+        console.log("DB CONNECTION SUCCESS");
         console.log(get_json);
             if(get_json.results == null){
            	 	console.log("NO DATA");
@@ -100,10 +94,7 @@ var search_msg_data
 	
 function main(){
 
-console.log(textdata[1].name);
-
 //Gomi
-var gomi = new Array();
 for(var i=0; i<on; i++){
 	 //Gomi(type, id, typetid, name, xPos, yPos, chkin, rad, ord)
 	gomi[i] = new Gomi("i", i, i, "Gomi" + i , gframe_x+Math.random()*gframe_w+40, gframe_y + gframe_h*i/on + Math.random()*50-100, 1 , Math.random()*40-20 , order); 
@@ -117,10 +108,11 @@ for(var i=on; i<on+ton; i++){
 	order++;
 	console.log(gomi[i]);
 }
-	
+
 //load canvas
 var canvas = document.getElementById('canvas');
 var cc = canvas.getContext('2d');
+
 
 //mouse function
 canvas.onmousemove = mouseMoveListner;
@@ -177,7 +169,7 @@ canvas.addEventListener("mousedown",function(e){
 			}
 	        }
 			gomi[dr].ord = order;
-			log[lo] = new Log("DRAGGOMI," + gomi[dr].img + "," + e.clientX + "," + e.clientY);
+			log[lo] = new Log("DRAGGOMI," + gomi[dr].name + "," + e.clientX + "," + e.clientY);
 
 		}
 		
@@ -259,7 +251,7 @@ canvas.addEventListener("mouseup",function(e){
 	    		focus = null;
 	    	}
 			
-			log[lo] = new Log("DROPIMAGE," + dr + "," + mouseX + "," + mouseY);
+			log[lo] = new Log("DROPGOMI," + gomi[dr].name + "," + mouseX + "," + mouseY);
 			dr = null;
 			isDrag = false;
 		}
@@ -277,7 +269,7 @@ canvas.addEventListener("mouseup",function(e){
 //Main loop
 var loop = function() {
 	
-			cc.clearRect(0,0,canvas.width,canvas.height);
+		cc.clearRect(0,0,canvas.width,canvas.height);
 
 		for(var o=0; o<order+1; o++){
 	    	for(var i=0; i<gomi.length; i++){
@@ -290,13 +282,18 @@ var loop = function() {
 	    	
     		for(var ii = 0; ii < line.length; ii++){
         		if(line[ii].ord == o){
-    	    		//line[ii].move()
     	    		line[ii].display(cc);
-    	    		//console.log(line[ii]);
         		}
         	}
 		}	
 
+		for(var iii = 0; iii < agentWord.length; iii++){
+			if(agentWord[iii].status_flag == 1){
+				agentWord[iii].display(cc);
+				break;
+			}
+    	}
+		
 		for(var i = 0; i < box.length; i++){
 			box[i].display(cc);
 		}
@@ -309,9 +306,81 @@ var loop = function() {
 		
 	setTimeout(loop, 100);
  };
+ 
+ 
+var agentloop = function() {
+
+	 var wordsIdOnFrame = [];
+	 for(var i=0; i<gomi.length; i++){
+	    	if(gomi[i].xPos < frame_x + frame_w){
+	    		wordsIdOnFrame.push(i);	 
+	    	}
+	 }
+	 console.log(wordsIdOnFrame);
+	 
+	 if(wordsIdOnFrame.length != 0){
+		 if(wordsIdOnFrame.length == 1){
+			 var aid = 0;
+		 }else{
+			 var aid = Math.floor( Math.random() * (wordsIdOnFrame.length));
+		 }
+		 console.log(gomi[wordsIdOnFrame[aid]].name);
+		 
+		 $.ajax({
+		        type: "GET",
+		        url: "./hatena.php?w=" + gomi[wordsIdOnFrame[aid]].name,
+		        
+		        success: function(msg){
+		        console.log(msg);
+		        var gaj = eval("("+msg+")");
+		        console.log("HATENA CONNECTION SUCCESS");
+		        console.log(gaj);
+		        	//関連タイトルデータ抽出
+		        	var items = gaj.results.channel.item;
+		        	console.log(items);
+		        	
+		            if(items.length == 0){
+		           	 	console.log("NO DATA");
+		            }else{
+		            var wlist = [];
+		            for(var gci = 0; gci <gaj.results.channel.item.length; gci++){
+		            	wlist.push(gaj.results.channel.item[gci].title);
+		            }
+		            console.log(wlist);
+		            
+		            if(wlist.length != 0){
+			        for(var wli = 0; wli < wlist.length; wli++){
+			            	var wn = wlist[wli].indexOf(gomi[wordsIdOnFrame[aid]].name);
+			            		if(wn != -1){
+			            		var aword = wlist[wli].split(gomi[wordsIdOnFrame[aid]].name);
+			            		console.log(aword);
+			            		
+			            		for(var awi = 0; awi < aword.length; awi++){
+			            		if(aword[awi] != ""){
+			            			//id, name, gomiid, relation, order
+			            			agentWord[aw] = new AgentWord(aw , aword[awi], wordsIdOnFrame[aid], awi, order);
+			            			console.log(agentWord[aw]);
+			            			aw++;
+			            			order++;
+			            		}
+			            		}
+			            		}else{
+			            			agentWord[aw] = new AgentWord(aw , wlist[wli], wordsIdOnFrame[aid], 2, order);
+			            			aw++;
+			            			order++;
+			            		}
+			        }
+		            }
+		            }
+		        }//success
+		        });//ajax
+	 }
+	 setTimeout(agentloop, 30000);
+ };
 
 //Start loop
 loop();
+agentloop();
 
 };
 
@@ -359,7 +428,7 @@ function end(){
 	  
 	  this.mo = 0;
 	  this.ord = ord;
-	  	  
+	  
 	  if(this.type == "i"){
 		  this.w = iconimg[this.typeid].width*imgrate;
 		  this.h = iconimg[this.typeid].height*imgrate;
@@ -371,6 +440,8 @@ function end(){
 	  
 	  this.sizerate = 1; 
 	  this.sizerateSpeed = 0.2;
+	  
+	  this.status_flag = 1;
  }
  
  /* Display */
@@ -404,6 +475,7 @@ function end(){
     		 this.h = 30 * this.sizerate;
     		 //console.log(cc.measureText(this.name).width);
     	 }
+    	 
     	 	/**
         	 cc.save();
         	 cc.globalAlpha = 0.4;
@@ -525,7 +597,6 @@ function Toolbox(_i, _x, _y, _im){
 Toolbox.prototype.display = function(cc){
 	//cc.fillStyle = this.color;
 	//cc.fillRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
-	
 	cc.beginPath();
 	cc.lineWidth = 1;
 	cc.strokeStyle='#000000';
@@ -569,7 +640,7 @@ Line.prototype.display = function(cc){
 		cc.lineWidth = this.width;
 		cc.strokeStyle = this.color;
 		cc.moveTo(this.x[0],this.y[0]);
-		for(i = 0; i < this.x.length; i++){
+		for(var i = 0; i < this.x.length; i++){
 			cc.lineTo(this.x[i], this.y[i]);
 		}
 		cc.stroke();
@@ -582,6 +653,64 @@ Line.prototype.move = function(){
 			this.y[i] = this.y[i] + this.ySpeed;
 	}
 }
+
+//** Agent Word **//
+//id, name, gomiid, relation, order
+function AgentWord(_i, _n, _gid, _rel, _o){
+	  this.id = _i;
+	  this.name = _n;
+	  this.gid = _gid;
+	  this.relation = _rel;
+	  this.xPos = gomi[this.gid].xPos;
+	  this.yPos = gomi[this.gid].yPos;
+	  this.w = 0;
+	  this.h = 0;
+	  this.alpha = 0.85;
+	  this.ord = _o;
+	  this.status_flag = 1;
+}
+
+/* display */
+AgentWord.prototype.display = function(cc){
+	if(this.status_flag == 1){
+		
+		cc.save();
+   	 	cc.globalAlpha = this.alpha;
+		cc.textBaseline = "middle";
+		cc.textAlign = "center";
+		cc.font = 20 + "px 'ヒラギノ明朝 ProN W6'";
+		cc.fillStyle = "#008000";
+		
+		this.w = cc.measureText(this.name).width;
+		this.h = 30;
+		
+		if(this.relation == 0){
+			this.xPos = gomi[this.gid].xPos - gomi[this.gid].w/2;
+			this.yPos = gomi[this.gid].yPos - 25;
+		}else if(this.relation == 1){
+			this.xPos = gomi[this.gid].xPos + gomi[this.gid].w/2;
+			this.yPos = gomi[this.gid].yPos + 25;
+		}else if(this.relation == 2){
+			this.xPos = gomi[this.gid].xPos;
+			this.yPos = gomi[this.gid].yPos + 25;
+		}
+		//console.log(gomi[this.gid].xPos);
+		cc.fillText(this.name, this.xPos, this.yPos);
+		cc.restore();
+		this.alpha -= 0.02;
+		//console.log(this.alpha +"-"+ this.w +"-"+ this.h);
+	}
+	
+	if(this.alpha < 0){
+		this.status_flag = 0;
+	}
+	
+	if(this.xPos > gframe_x){
+		this.status_flag = 0;
+	}
+	
+};
+
 
 function Log(_l){
 	this.date = new Date();
@@ -601,4 +730,3 @@ var getpoint = function(_e, _p){
 		return mouseY;
 	}
 }
-
