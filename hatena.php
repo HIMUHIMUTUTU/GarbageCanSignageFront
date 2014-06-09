@@ -37,21 +37,32 @@ function getKeyword($proxy,$word){
 	$xml_string=file_get_contents($req, false,$proxy_context);
 	$xml_obj=simplexml_load_string($xml_string);
 
-	//整形しjsonにエンコード
-	$arrayData = get_object_vars($xml_obj);
-	$arrayData = array( "results" => $arrayData);
+	$keyword = get_object_vars($xml_obj);
+	//$arrayData = array( "results" => $arrayData);
 	
-	$fetchData = json_encode($arrayData);
+	//$fetchData = json_encode($arrayData);
 	//$fetchData = array( "results" => $fetchData);
 	
-	return $fetchData;
+	return $keyword;
 	
 }
 
-$word = htmlspecialchars($_GET["w"]);
-$fetchData = getKeyword(true, $word);
+$words = htmlspecialchars($_GET["w"]);
+$words_array = explode(",", $words);
+
+$fetchData  = array();
+
+for($i = 0; $i < count($words_array); $i++){
+$keyword = getKeyword(true, $words_array[$i]);
+$fetchData += array($i => $keyword);
+}
+
+//整形してjson出力
+$fetchData = array( "results" => $fetchData);
+$fetchData = json_encode($fetchData);
 
 echo $fetchData;
+
 
 /**
 window.onload = function() {

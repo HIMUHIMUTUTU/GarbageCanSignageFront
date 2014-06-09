@@ -2,10 +2,10 @@
 
 /** client canvas file **/
 /* Variables definition */
-var frame_x = 0;
-var frame_y = 0;
-var frame_w = 600
-var frame_h = 800;
+var frame_x = 10;
+var frame_y = 50;
+var frame_w = 500
+var frame_h = 740;
 var gframe_x = 600;
 var gframe_y = 0;
 var gframe_w = 400;
@@ -52,16 +52,18 @@ var agentWord = new Array();
 var aw = 0;
 
 var gomi = new Array();
-var on = 2; //number of image
-var ton = 50; //number of text
+var on = 0; //number of image
+var ton = 200; //number of text
 
 var textdata = null;
 
+var time = 0;
+
 //Draw bottun;
 var box = new Array();
-box[0] = new Toolbox(0, 10, 10, 0);
-box[1] = new Toolbox(1, 10, 60, 1);
-box[2] = new Toolbox(2, 10, 110, 2);
+box[0] = new Toolbox(0, 100, 10, 0);
+box[1] = new Toolbox(1, 150, 10, 1);
+box[2] = new Toolbox(2, 200, 10, 2);
 
 log[lo] = new Log("SESSIONSTART");
 
@@ -169,7 +171,7 @@ canvas.addEventListener("mousedown",function(e){
 			}
 	        }
 			gomi[dr].ord = order;
-			log[lo] = new Log("DRAGGOMI," + gomi[dr].name + "," + e.clientX + "," + e.clientY);
+			log[lo] = new Log("DRAGGOMI," + dr + "," + gomi[dr].name + "," + (gomi[dr].xPos - frame_x) + "," + (gomi[dr].yPos - frame_y));
 
 		}
 		
@@ -229,10 +231,10 @@ canvas.addEventListener("mousemove", function(e){
 		var mouseX = getpoint(e,"x");
 		var mouseY = getpoint(e,"y");
 		
-		if(mouseX > frame_x && mouseX < frame_x + frame_w && mouseY > frame_y + box[0].y + box[0].w + box[0].y + 20 && mouseY < frame_y + frame_h){
+		if(mouseX > frame_x && mouseX < frame_x + frame_w && mouseY > frame_y && mouseY < frame_y + frame_h){
 			line[li].draw(mouseX, mouseY);
 			line[li].display(cc);
-			log[lo] = new Log("DRAWING," + mouseX + "," + mouseY);
+			log[lo] = new Log("DRAWING," + (mouseX - frame_x) + "," + (mouseY - frame_y));
 		};
 	};
     }
@@ -251,7 +253,7 @@ canvas.addEventListener("mouseup",function(e){
 	    		focus = null;
 	    	}
 			
-			log[lo] = new Log("DROPGOMI," + gomi[dr].name + "," + mouseX + "," + mouseY);
+			log[lo] = new Log("DROPGOMI," + dr + "," + gomi[dr].name + "," + (gomi[dr].xPos - frame_x) + "," + (gomi[dr].yPos - frame_y));
 			dr = null;
 			isDrag = false;
 		}
@@ -268,13 +270,25 @@ canvas.addEventListener("mouseup",function(e){
 
 //Main loop
 var loop = function() {
-	
-		cc.clearRect(0,0,canvas.width,canvas.height);
-
+		
+		cc.fillStyle = '#d3d3d3';
+		cc.fillRect(0,0,canvas.width,canvas.height);
+		
+		cc.font = "23px 'ヒラギノ明朝 ProN W6'";
+		cc.fillStyle = '#ffffff';
+		var min =  Math.floor(time / 600);
+		 if(min < 10){min = '0' + min;}
+		var sec =  Math.floor((time % 600) / 10);
+		 if(sec < 10){sec = '0' + sec;}
+	 	cc.fillText(min + ":" + sec , 10, 35);
+	 	
+	 	cc.fillStyle = '#ffffff';
+		cc.fillRect(frame_x,frame_y,frame_w,frame_h);
+		
 		for(var o=0; o<order+1; o++){
 	    	for(var i=0; i<gomi.length; i++){
 		    	if(gomi[i].ord == o){
-		    		gomi[i].move(); 
+		    		//gomi[i].move(); 
 			       	gomi[i].edge(); 
 		      		gomi[i].display(cc);
 		    	}
@@ -285,14 +299,16 @@ var loop = function() {
     	    		line[ii].display(cc);
         		}
         	}
-		}	
-
+		}
+		
+		/**
 		for(var iii = 0; iii < agentWord.length; iii++){
+			agentWord[iii].move();
 			if(agentWord[iii].status_flag == 1){
 				agentWord[iii].display(cc);
-				break;
 			}
     	}
+		**/
 		
 		for(var i = 0; i < box.length; i++){
 			box[i].display(cc);
@@ -303,32 +319,147 @@ var loop = function() {
 		cc.strokeStyle='#696969';
 		cc.strokeRect(frame_x+1, frame_y , frame_w, frame_h);
 		**/
+		time++;
 		
 	setTimeout(loop, 100);
  };
  
  
 var agentloop = function() {
-
-	 var wordsIdOnFrame = [];
+	
+	
+	/**
+	for(var li = 0; li < log.length; li++){
+		logarray = log[li].log.split(",");
+		if(logarray[2] == "DROPGOMI"){
+			if(logarray[5] < frame_x + frame_w){
+				wordsIdOnFrame.push(logarray[4]);
+			}
+		}
+	}
+	**/
+	
+	var wordsIdOnFrame = [];
 	 for(var i=0; i<gomi.length; i++){
 	    	if(gomi[i].xPos < frame_x + frame_w){
-	    		wordsIdOnFrame.push(i);	 
+	    		wordsIdOnFrame.push([i, gomi[i].name]);	 
 	    	}
 	 }
-	 console.log(wordsIdOnFrame);
 	 
+	 console.log(wordsIdOnFrame);
+
 	 if(wordsIdOnFrame.length != 0){
-		 if(wordsIdOnFrame.length == 1){
-			 var aid = 0;
-		 }else{
-			 var aid = Math.floor( Math.random() * (wordsIdOnFrame.length));
-		 }
-		 console.log(gomi[wordsIdOnFrame[aid]].name);
+			 var logArray = [];
+			 var lli = 0;
+			 
+			 for(var li = 0; li < log.length; li++){
+					la = log[li].log.split(",");
+					if(la[2] == "DROPGOMI" || wordsIdOnFrame.indexOf((la[3])) != -1){
+						logArray.push([Number(la[0]), la[3] ,la[4]]);
+						lli++;
+					}
+			 }
+			 
+			 console.log(logArray);
+			 //var aid = Math.floor( Math.random() * (wordsIdOnFrame.length));
 		 
+		 lli = lli - 1;
+		 //console.log("a:" + lli);
+		 
+		 //console.log(gomi[wordsIdOnFrame[wordsIdOnFrame.length - 1]].name);
+		
+		hatena(wordsIdOnFrame).done(function(msg) {
+		});
+			 
+		//はてなapi	 
+		function hatena(wiof){
+			var d = $.Deferred();
+			
+			var words = "";
+			for(var wi = 0; wi <wiof.length; wi++){
+				if(wi != 0){
+				words += ","
+				}	
+				words += wiof[wi][1];
+			}
+			
+			$.ajax({
+				type: "GET",
+		        url: "./hatena.php?w=" + words,
+		        success: function(msg){
+		        	console.log(msg);
+			        var gaj = eval("("+msg+")");
+			        console.log(gaj);
+			        var results = gaj.results;
+			        	for(var wii=0 ; wii <wiof.length; wii++){
+			        		console.log(results[wii].channel);
+			        		
+			        		var k = [];
+			        		for (keys in results[wii].channel){
+			        				k.push(keys);
+			        			}
+			        		
+			        		if(keys.indexOf("item") == -1){
+			        			console.log("noitem");
+			        			return;
+			        		}
+			        		
+			        		
+			        		var items = results[wii].channel.item;
+			        		console.log(items);
+				        	
+			        		if(!(items instanceof Array)){
+				            	agentWord[aw] = new AgentWord(aw , items.title, wiof[wii][0], 2, order, 0);
+				            	console.log(agentWord[aw]);
+				            	aw++;
+		            			order++;
+		            			
+			        		}else if(items.length == 0){
+				           	 	console.log("NO DATA");
+				           	 	
+				            }else{
+
+				            var wlist = [];
+				            for(var gci = 0; gci <items.length; gci++){
+				            	wlist.push(items[gci].title);
+				            }
+				            console.log(wlist);
+				            
+					        for(var wli = 0; wli < wlist.length; wli++){
+					            	var wn = wlist[wli].indexOf(wiof[wii][1]);
+					            		if(wn != -1){
+					            		var aword = wlist[wli].split(wiof[wii][1]);
+					            		console.log(aword);
+					            		
+					            		for(var awi = 0; awi < aword.length; awi++){
+					            		if(aword[awi] != ""){
+					            			//id, name, gomiid, relation, order, appearorder
+					            			agentWord[aw] = new AgentWord(aw , aword[awi], wiof[wii][0], awi, order, wli);
+					            			console.log(agentWord[aw]);
+					            			aw++;
+					            			order++;
+					            		}
+					            		}
+					            		}else{
+					            			agentWord[aw] = new AgentWord(aw , wlist[wli], wiof[wii][0], 2, order, wli);
+					            			aw++;
+					            			order++;
+					            		}
+					        }
+				            }
+				            
+				            }
+		        	d.resolve();
+		        }
+			});
+			return d.promise();
+		}
+
+		
+		/**
 		 $.ajax({
 		        type: "GET",
-		        url: "./hatena.php?w=" + gomi[wordsIdOnFrame[aid]].name,
+		        url: "./hatena.php?w=" + logArray[lli][2],
 		        
 		        success: function(msg){
 		        console.log(msg);
@@ -350,22 +481,22 @@ var agentloop = function() {
 		            
 		            if(wlist.length != 0){
 			        for(var wli = 0; wli < wlist.length; wli++){
-			            	var wn = wlist[wli].indexOf(gomi[wordsIdOnFrame[aid]].name);
+			            	var wn = wlist[wli].indexOf(logArray[lli][2]);
 			            		if(wn != -1){
-			            		var aword = wlist[wli].split(gomi[wordsIdOnFrame[aid]].name);
+			            		var aword = wlist[wli].split(logArray[lli][2]);
 			            		console.log(aword);
 			            		
 			            		for(var awi = 0; awi < aword.length; awi++){
 			            		if(aword[awi] != ""){
 			            			//id, name, gomiid, relation, order
-			            			agentWord[aw] = new AgentWord(aw , aword[awi], wordsIdOnFrame[aid], awi, order);
+			            			agentWord[aw] = new AgentWord(aw , aword[awi], logArray[lli][1], awi, order);
 			            			console.log(agentWord[aw]);
 			            			aw++;
 			            			order++;
 			            		}
 			            		}
 			            		}else{
-			            			agentWord[aw] = new AgentWord(aw , wlist[wli], wordsIdOnFrame[aid], 2, order);
+			            			agentWord[aw] = new AgentWord(aw , wlist[wli], logArray[lli][1], 2, order);
 			            			aw++;
 			            			order++;
 			            		}
@@ -374,15 +505,17 @@ var agentloop = function() {
 		            }
 		        }//success
 		        });//ajax
-	 }
+		        **/
+		 }
 	 setTimeout(agentloop, 30000);
  };
 
 //Start loop
 loop();
-agentloop();
+//agentloop();
 
 };
+
 
 //Publish log 
 function end(){
@@ -416,15 +549,17 @@ function end(){
 	
 	  this.name = name;
 	  
-	  this.xPos = xPos;
-	  this.yPos = yPos;
-	  this.rad = rad;
+	  //this.xPos = xPos;
+	  //this.yPos = yPos;
+	  this.xPos = gframe_x + Math.floor(this.id / 50) * 120;
+	  this.yPos = gframe_y + 10+ this.id % 50 * 17;
+	  this.rad = 0;
 	  this.xSpeed = 0;
 	  this.ySpeed = 0;
 	  this.rSpeed = 0;
 	  
 	  this.chkin = chkin;
-	  this.speed = 1;
+	  this.speed = 3;
 	  
 	  this.mo = 0;
 	  this.ord = ord;
@@ -467,12 +602,12 @@ function end(){
     	 if(this.type == "t"){
     		 cc.textBaseline = "middle";
     		 cc.textAlign = "center";
-    		 cc.font = 30 * this.sizerate + "px 'ヒラギノ明朝 ProN W6'";
+    		 cc.font = 15 * this.sizerate + "px 'ヒラギノ明朝 ProN W6'";
     		 cc.fillStyle = "black";
     		 
     		 cc.fillText(this.name, this.xPos, this.yPos);
     		 this.w = cc.measureText(this.name).width;
-    		 this.h = 30 * this.sizerate;
+    		 this.h = 15 * this.sizerate;
     		 //console.log(cc.measureText(this.name).width);
     	 }
     	 
@@ -498,7 +633,7 @@ function end(){
 	     if(this.xSpeed > 1){this.xSpeed = 1;}else if(this.xSpeed < -1){this.xSpeed = -1;}
 	     
 	     this.ySpeed += (Math.random()*2 - 1)*(this.xPos - gframe_x)*0.005*this.speed;
-	     if(this.ySpeed > 4){this.ySpeed = 4;}else if(this.ySpeed < 0){this.ySpeed = 0;}
+	     if(this.ySpeed > 12){this.ySpeed = 12;}else if(this.ySpeed < 0){this.ySpeed = 0;}
 	     
 	     this.rad += this.rSpeed;
 	     this.xPos += this.xSpeed;
@@ -576,7 +711,7 @@ function end(){
 	 if(this.type == "t"){
 		 var newt = Math.floor( Math.random() * Object.keys(textdata).length ) + 1;
 		 this.typeid = newt;
-		 console.log(newt);
+		 //console.log(newt);
 		 this.name = textdata[newt].name;
 		 
 	 }
@@ -599,20 +734,20 @@ Toolbox.prototype.display = function(cc){
 	//cc.fillRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
 	cc.beginPath();
 	cc.lineWidth = 1;
-	cc.strokeStyle='#000000';
-	cc.strokeRect(frame_x + this.x, frame_y + this.y, this.w, this.w);
-	cc.drawImage(boximg[this.image], frame_x + this.x, frame_y + this.y, this.w, this.w); //icon
+	cc.strokeStyle='#ffffff';
+	cc.strokeRect(this.x, this.y, this.w, this.w);
+	cc.drawImage(boximg[this.image], this.x, this.y, this.w, this.w); //icon
 	
 	if(this.status_flag == 2){
 		cc.beginPath();
 		cc.lineWidth = 2;
 		cc.strokeStyle='#ffd700';
-		cc.strokeRect(frame_x + this.x-2, frame_y + this.y-2, 34, 34);
+		cc.strokeRect(this.x-2, this.y-2, 34, 34);
 	}else{
 		cc.beginPath();
 		cc.lineWidth = 2;
-		cc.strokeStyle='#ffffff';
-		cc.strokeRect(frame_x + this.x-2, frame_y + this.y-2, 34, 34);
+		cc.strokeStyle='#d3d3d3';
+		cc.strokeRect(this.x-2, this.y-2, 34, 34);
 	}
 }
 
@@ -655,19 +790,29 @@ Line.prototype.move = function(){
 }
 
 //** Agent Word **//
-//id, name, gomiid, relation, order
-function AgentWord(_i, _n, _gid, _rel, _o){
+//id, name, gomiid, relation, order, appearorder
+function AgentWord(_i, _n, _gid, _rel, _o, _ao){
 	  this.id = _i;
 	  this.name = _n;
 	  this.gid = _gid;
 	  this.relation = _rel;
-	  this.xPos = gomi[this.gid].xPos;
-	  this.yPos = gomi[this.gid].yPos;
 	  this.w = 0;
 	  this.h = 0;
-	  this.alpha = 0.85;
+	  this.alpha = 0.5;
 	  this.ord = _o;
-	  this.status_flag = 1;
+	  this.appearorder = _ao * 50;
+	  this.status_flag = 0;
+	  
+	  if(this.relation == 0){
+			this.xPos = gomi[this.gid].xPos - (gomi[this.gid].w/2 + Math.random() * 25 - 50);
+			this.yPos = gomi[this.gid].yPos - (10 + Math.random() * 25);
+		}else if(this.relation == 1){
+			this.xPos = gomi[this.gid].xPos + (gomi[this.gid].w/2 + Math.random() * 25 - 50);
+			this.yPos = gomi[this.gid].yPos + (10 + Math.random() * 25);
+		}else if(this.relation == 2){
+			this.xPos = gomi[this.gid].xPos;
+			this.yPos = gomi[this.gid].yPos + (Math.floor(Math.random()*2)*2 - 1) * (10 + Math.random() * 25);
+		}
 }
 
 /* display */
@@ -684,23 +829,14 @@ AgentWord.prototype.display = function(cc){
 		this.w = cc.measureText(this.name).width;
 		this.h = 30;
 		
-		if(this.relation == 0){
-			this.xPos = gomi[this.gid].xPos - gomi[this.gid].w/2;
-			this.yPos = gomi[this.gid].yPos - 25;
-		}else if(this.relation == 1){
-			this.xPos = gomi[this.gid].xPos + gomi[this.gid].w/2;
-			this.yPos = gomi[this.gid].yPos + 25;
-		}else if(this.relation == 2){
-			this.xPos = gomi[this.gid].xPos;
-			this.yPos = gomi[this.gid].yPos + 25;
-		}
 		//console.log(gomi[this.gid].xPos);
 		cc.fillText(this.name, this.xPos, this.yPos);
 		cc.restore();
-		this.alpha -= 0.02;
+		this.alpha = this.alpha * 50 / 51;
 		//console.log(this.alpha +"-"+ this.w +"-"+ this.h);
 	}
 	
+	/**
 	if(this.alpha < 0){
 		this.status_flag = 0;
 	}
@@ -708,13 +844,19 @@ AgentWord.prototype.display = function(cc){
 	if(this.xPos > gframe_x){
 		this.status_flag = 0;
 	}
+	**/
 	
 };
 
+AgentWord.prototype.move = function(cc){
+	this.appearorder -= 1;
+	if(this.appearorder < 0){
+		this.status_flag = 1;
+	}
+}
 
 function Log(_l){
-	this.date = new Date();
-	this.log = lo + "," + this.date.getTime() + "," + _l;
+	this.log = lo + "," + time + "," + _l;
 	console.log(this.log);
 	lo++;
 }
